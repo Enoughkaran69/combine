@@ -1,0 +1,21 @@
+{
+  "name": "video-audio-combine",
+  "version": "1.0.0",
+  "description": "A serverless function to combine video and audio on Vercel",
+  "main": "api/combine.js",
+  "dependencies": {
+    "ffmpeg-static": "^5.1.0",  // Static FFmpeg binary
+    "fluent-ffmpeg": "^2.1.2"   // Fluent FFmpeg wrapper
+  },
+  "devDependencies": {
+    "vercel": "^28.0.0"          // Optional: If you want to test locally using Vercel CLI
+  },
+  "scripts": {
+    "dev": "vercel dev",           // To run the project locally before deploying (optional)
+    "build": "vercel build",       // Optional build script (if needed)
+    "start": "vercel start"        // To start the Vercel project locally (optional)
+  },
+  "engines": {
+    "node": "16.x"  // Ensure you're using Node.js 16 or the version that supports your packages
+  }
+}
