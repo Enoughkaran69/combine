@@ -25,7 +25,7 @@
     <script>
         async function fetchFormats() {
             const videoUrl = document.getElementById("video-url").value;
-            const response = await fetch("api/get_video_formats", {
+            const response = await fetch("api/fetchVideoInfo", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
