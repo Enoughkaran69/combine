@@ -1,43 +1,96 @@
-const ytdl = require("ytdl-core");
+from flask import Flask, request, jsonify
+import yt_dlp
 
-export default async function handler(req, res) {
-  if (req.method === "POST") {
-    try {
-      const { url } = req.body;
+app = Flask(__name__)
 
-      // Validate URL
-      if (!ytdl.validateURL(url)) {
-        return res.status(400).json({ error: "Invalid YouTube URL!" });
-      }
+def get_all_formats(video_url):
+    with yt_dlp.YoutubeDL() as ydl:
+        info_dict = ydl.extract_info(video_url, download=False)
+        formats = info_dict['formats']
+        return formats
 
-      // Fetch video information
-      const info = await ytdl.getInfo(url);
+def bytes_to_mb(byte_size):
+    """Convert bytes to megabytes."""
+    if byte_size == 'N/A':
+        return 'N/A'
+    return round(byte_size / (1024 * 1024), 2)  # Convert bytes to MB and round to 2 decimal places
 
-      // Extract formats
-      const formats = info.formats
-        .filter((format) => format.url)
-        .map((format) => ({
-          quality: format.qualityLabel || "Audio Only",
-          type: format.hasVideo ? "Video" : "Audio",
-          url: format.url,
-        }));
+@app.route('/get_video_formats', methods=['POST'])
+def get_video_formats():
+    video_url = request.json.get('video_url')
+    if not video_url:
+        return jsonify({"error": "No video URL provided"}), 400
 
-      if (formats.length === 0) {
-        return res.status(404).json({ error: "No downloadable formats found!" });
-      }
+    all_formats = get_all_formats(video_url)
+    
+    if not all_formats:
+        return jsonify({"error": "No formats available."}), 404
+    
+    video_formats = {}
+    audio_formats = []
+    combined_formats = []
 
-      res.status(200).json({ formats });
-    } catch (error) {
-      console.error("Error fetching video info:", error.message);
+    # Process each format and store it accordingly
+    for format_info in all_formats:
+        if format_info['ext'] == 'mhtml':
+            continue
 
-      // Handle specific errors like 410
-      if (error.message.includes("410")) {
-        return res.status(410).json({ error: "YouTube video not accessible (Error 410)." });
-      }
+        resolution = format_info.get('height', 'None')  # Get resolution or 'None' if not available
+        
+        if resolution != 'None':
+            # Check if this resolution already exists, and keep the highest file size format
+            current_filesize = format_info.get('filesize', 0)
+            if resolution not in video_formats or video_formats[resolution].get('filesize', 0) < current_filesize:
+                video_formats[resolution] = format_info
+        else:
+            # For audio-only formats, add them to the audio list
+            if format_info['ext'] == 'm4a':
+                format_info['type'] = 'Audio Codec'
+            audio_formats.append(format_info)
 
-      res.status(500).json({ error: `Failed to fetch video info. ${error.message}` });
+        # Find combined formats (both audio and video) based on presence of audio and video codecs
+        if 'audio_codec' in format_info and 'video_codec' in format_info:
+            combined_formats.append(format_info)
+
+    best_combined = None
+    if combined_formats:
+        best_combined = max(combined_formats, key=lambda f: f.get('filesize', 0))
+    
+    best_video = max(video_formats.values(), key=lambda f: f.get('filesize', 0))
+    best_video_size = best_video.get('filesize', 0)
+    best_video_resolution = best_video.get('height', 'Unknown')
+
+    response = {
+        "video_formats": [
+            {
+                "format_id": format_info['format_id'],
+                "extension": format_info['ext'].upper(),
+                "resolution": resolution,
+                "file_size_mb": bytes_to_mb(format_info.get('filesize', 0))
+            }
+            for resolution, format_info in video_formats.items()
+        ],
+        "audio_formats": [
+            {
+                "format_id": format_info['format_id'],
+                "extension": format_info['ext'].upper(),
+                "type": format_info.get('type', 'Audio'),
+                "bitrate": format_info.get('tbr', 'N/A'),
+                "file_size_mb": bytes_to_mb(format_info.get('filesize', 0))
+            }
+            for format_info in audio_formats
+        ],
+        "best_video": {
+            "resolution": best_video_resolution,
+            "file_size_mb": bytes_to_mb(best_video_size)
+        },
+        "best_combined": {
+            "resolution": best_combined.get('height', 'N/A') if best_combined else 'N/A',
+            "file_size_mb": bytes_to_mb(best_combined.get('filesize', 0)) if best_combined else 'N/A'
+        }
     }
-  } else {
-    res.status(405).json({ error: "Method not allowed." });
-  }
-}
+
+    return jsonify(response)
+
+if __name__ == '__main__':
+    app.run(debug=True)
