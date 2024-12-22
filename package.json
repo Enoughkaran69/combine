@@ -1,21 +1,9 @@
 {
-  "name": "combine",
+  "name": "youtube-downloader",
   "version": "1.0.0",
-  "description": "A serverless function to combine video and audio on Vercel",
-  "main": "api/combine.js",
+  "main": "index.js",
+  "license": "MIT",
   "dependencies": {
-    "ffmpeg-static": "^5.1.0",
-    "fluent-ffmpeg": "^2.1.2"
-  },
-  "devDependencies": {
-    "vercel": "^28.0.0"
-  },
-  "scripts": {
-    "dev": "vercel dev",
-    "build": "vercel build",
-    "start": "vercel start"
-  },
-  "engines": {
-    "node": "16.x"
+    "ytdl-core": "^4.11.0"
   }
 }
