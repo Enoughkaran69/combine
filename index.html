@@ -1,86 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube Downloader</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      background-color: #007BFF;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .downloads {
-      margin-top: 20px;
-    }
-    .download-button {
-      display: block;
-      margin: 10px 0;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Format Selector</title>
 </head>
 <body>
-  <div class="container">
-    <h1>YouTube Downloader</h1>
-    <input id="youtubeUrl" type="text" placeholder="Enter YouTube link here" />
-    <button id="fetchButton">Fetch</button>
-    <div id="downloads" class="downloads"></div>
-  </div>
-  <script>
-    document.getElementById("fetchButton").addEventListener("click", async () => {
-      const url = document.getElementById("youtubeUrl").value;
-      if (!url) {
-        alert("Please enter a YouTube link!");
-        return;
-      }
+    <h1>YouTube Format Selector</h1>
+    <input type="text" id="video-url" placeholder="Enter YouTube Video URL" />
+    <button onclick="fetchFormats()">Get Formats</button>
 
-      const response = await fetch("/api/fetchVideoInfo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
+    <h3>Available Video Formats:</h3>
+    <ul id="video-formats"></ul>
 
-      const data = await response.json();
-      const downloadsDiv = document.getElementById("downloads");
-      downloadsDiv.innerHTML = "";
+    <h3>Available Audio Formats:</h3>
+    <ul id="audio-formats"></ul>
 
-      if (data.error) {
-        downloadsDiv.innerHTML = `<p style="color: red;">${data.error}</p>`;
-        return;
-      }
+    <h3>Best Video Format:</h3>
+    <p id="best-video"></p>
 
-      data.formats.forEach(format => {
-        const button = document.createElement("a");
-        button.href = format.url;
-        button.target = "_blank";
-        button.className = "download-button";
-        button.innerText = `Download ${format.quality} (${format.type})`;
-        downloadsDiv.appendChild(button);
-      });
-    });
-  </script>
+    <h3>Best Combined Format:</h3>
+    <p id="best-combined"></p>
+
+    <script>
+        async function fetchFormats() {
+            const videoUrl = document.getElementById("video-url").value;
+            const response = await fetch("api/get_video_formats", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ video_url: videoUrl })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Display video formats
+                const videoList = document.getElementById("video-formats");
+                videoList.innerHTML = "";
+                data.video_formats.forEach(format => {
+                    const listItem = document.createElement("li");
+                    listItem.textContent = `ID: ${format.format_id}, ${format.resolution} - ${format.file_size_mb} MB`;
+                    videoList.appendChild(listItem);
+                });
+
+                // Display audio formats
+                const audioList = document.getElementById("audio-formats");
+                audioList.innerHTML = "";
+                data.audio_formats.forEach(format => {
+                    const listItem = document.createElement("li");
+                    listItem.textContent = `ID: ${format.format_id}, ${format.type} - ${format.bitrate} kbps - ${format.file_size_mb} MB`;
+                    audioList.appendChild(listItem);
+                });
+
+                // Best video format
+                document.getElementById("best-video").textContent = `Resolution: ${data.best_video.resolution}, Size: ${data.best_video.file_size_mb} MB`;
+
+                // Best combined format
+                document.getElementById("best-combined").textContent = `Resolution: ${data.best_combined.resolution}, Size: ${data.best_combined.file_size_mb} MB`;
+            } else {
+                alert("Error: " + response.statusText);
+            }
+        }
+    </script>
 </body>
 </html>
