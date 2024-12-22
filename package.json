@@ -1,5 +1,5 @@
 {
-  "name": "video-audio-combine",
+  "name": "combine",
   "version": "1.0.0",
   "description": "A serverless function to combine video and audio on Vercel",
   "main": "api/combine.js",
